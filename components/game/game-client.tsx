@@ -55,7 +55,6 @@ export default function GameClient() {
   const [trackId, setTrackId] = useState(tracks[0].id);
   const didLog = useRef(false);
   const introStarted = useRef(false);
-  const entranceCueRequested = useRef(false);
   const muteStorageErrorNotified = useRef(false);
   const muted = mutePreference.muted;
 
@@ -73,7 +72,7 @@ export default function GameClient() {
   const playerTwo = getCrew(secondCrew);
   const seriesWinner: Mark | null = scores[0] === scores[1] ? null : scores[0] > scores[1] ? 0 : 1;
   const selectedTrack = tracks.find((track) => track.id === trackId) ?? tracks[0];
-  const { audioUnlocked, audioError, unlockAudio, playEffect, playEntranceEffect } = useGameAudio({
+  const { audioUnlocked, audioError, unlockAudio, playEffect } = useGameAudio({
     enabled: mutePreference.loaded && !muted,
     musicOn,
     musicReady: !introVisible,
@@ -82,12 +81,6 @@ export default function GameClient() {
     effectsVolume,
     track: selectedTrack,
   });
-
-  useEffect(() => {
-    if (!mutePreference.loaded || entranceCueRequested.current) return;
-    entranceCueRequested.current = true;
-    playEntranceEffect("/audio/sound-effects/luffy.mp3");
-  }, [mutePreference.loaded, playEntranceEffect]);
 
   useEffect(() => {
     if (!didLog.current) {
@@ -258,7 +251,6 @@ export default function GameClient() {
             ready={ready}
             exiting={introExiting}
             onExitTransitionEnd={() => setIntroVisible(false)}
-            onAudioUnlock={unlockAudio}
           />
         )}
 

@@ -63,7 +63,7 @@ public/
 
 ## Audio playback
 
-When the saved preference is unmuted, background music is attempted after the loading screen has exited. The Luffy entrance effect is also attempted during loading. Browsers and operating systems may block audible autoplay until a user gesture; if that happens, tap/click or press Enter/Space on the loading screen to start queued audio. Interacting with the game also unlocks audio. Device mute switches and system/browser volume settings still apply.
+When the saved preference is unmuted, background music is attempted after the loading screen has exited. The loading screen is silent. Browsers and operating systems may block audible autoplay until a user gesture; if that happens, interact with the game to start playback. Device mute switches and system/browser volume settings still apply.
 
 ## Development
 
