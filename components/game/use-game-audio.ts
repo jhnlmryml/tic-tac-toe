@@ -11,6 +11,7 @@ const effectFiles = [
 export type AudioPreferences = {
   enabled: boolean;
   musicOn: boolean;
+  musicReady: boolean;
   effectsOn: boolean;
   musicVolume: number;
   effectsVolume: number;
@@ -22,9 +23,10 @@ function play(
   description: string,
   onError: () => void,
   onBlocked: () => void = () => {},
+  onStarted: () => void = () => {},
 ) {
-  void audio.play().catch((error: unknown) => {
-    if (error instanceof DOMException) {
+  void audio.play().then(onStarted).catch((error: unknown) => {
+    if (error && typeof error === "object" && "name" in error) {
       if (error.name === "NotAllowedError") {
         onBlocked();
         return;
@@ -42,7 +44,7 @@ export function useGameAudio(preferences: AudioPreferences) {
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const unlockedRef = useRef(false);
   const preferencesRef = useRef(preferences);
-  const queuedEffects = useRef<string[]>([]);
+  const queuedEffects = useRef(new Set<string>());
   const activeEffects = useRef(new Set<HTMLAudioElement>());
 
   useEffect(() => {
@@ -86,7 +88,7 @@ export function useGameAudio(preferences: AudioPreferences) {
       audio.load();
     }
     audio.volume = preferences.musicVolume / 100;
-    if (preferences.enabled && preferences.musicOn && unlockedRef.current) {
+    if (preferences.enabled && preferences.musicOn && preferences.musicReady) {
       play(audio, "Background music", () => setAudioError(true));
     } else {
       audio.pause();
@@ -94,11 +96,16 @@ export function useGameAudio(preferences: AudioPreferences) {
     if (!preferences.enabled) {
       for (const effect of activeEffects.current) effect.pause();
       activeEffects.current.clear();
-      queuedEffects.current = [];
+      queuedEffects.current.clear();
     }
-  }, [preferences.enabled, preferences.musicOn, preferences.musicVolume, preferences.track.file]);
+  }, [preferences.enabled, preferences.musicOn, preferences.musicReady, preferences.musicVolume, preferences.track.file]);
 
-  const playEffectAudio = useCallback((source: string, volume: number, onBlocked?: () => void) => {
+  const playEffectAudio = useCallback((
+    source: string,
+    volume: number,
+    onBlocked?: () => void,
+    onStarted?: () => void,
+  ) => {
     const audio = new Audio(source);
     audio.preload = "auto";
     audio.volume = volume / 100;
@@ -112,23 +119,27 @@ export function useGameAudio(preferences: AudioPreferences) {
     }, () => {
       cleanUp();
       onBlocked?.();
-    });
+    }, onStarted);
   }, []);
 
-  const unlockAudio = useCallback(() => {
-    if (unlockedRef.current) return;
-    unlockedRef.current = true;
-    setUnlocked(true);
-
+  const unlockAudio = useCallback((enableAudio = false) => {
+    const wasUnlocked = unlockedRef.current;
+    if (!wasUnlocked) {
+      unlockedRef.current = true;
+      setUnlocked(true);
+    }
     const current = preferencesRef.current;
     const music = musicRef.current;
-    if (music && current.enabled && current.musicOn) {
+    if (music && (current.enabled || enableAudio) && current.musicOn && current.musicReady && (!wasUnlocked || enableAudio)) {
       music.volume = current.musicVolume / 100;
       play(music, "Background music", () => setAudioError(true));
     }
 
-    for (const source of queuedEffects.current.splice(0)) {
-      if (current.enabled && current.effectsOn) {
+    if (wasUnlocked) return;
+    const queued = Array.from(queuedEffects.current);
+    queuedEffects.current.clear();
+    for (const source of queued) {
+      if ((current.enabled || enableAudio) && current.effectsOn) {
         playEffectAudio(source, current.effectsVolume);
       }
     }
@@ -138,7 +149,7 @@ export function useGameAudio(preferences: AudioPreferences) {
     const current = preferencesRef.current;
     if (!current.enabled || !current.effectsOn) return;
     if (!unlockedRef.current) {
-      queuedEffects.current.push(source);
+      queuedEffects.current.add(source);
       return;
     }
     playEffectAudio(source, current.effectsVolume);
@@ -147,10 +158,13 @@ export function useGameAudio(preferences: AudioPreferences) {
   const playEntranceEffect = useCallback((source: string) => {
     const current = preferencesRef.current;
     if (!current.enabled || !current.effectsOn) return;
-    playEffectAudio(source, current.effectsVolume, () => {
-      const latest = preferencesRef.current;
-      if (latest.enabled && latest.effectsOn) queuedEffects.current.push(source);
-    });
+    queuedEffects.current.add(source);
+    playEffectAudio(
+      source,
+      current.effectsVolume,
+      () => {},
+      () => queuedEffects.current.delete(source),
+    );
   }, [playEffectAudio]);
 
   return { audioUnlocked: unlocked, audioError, unlockAudio, playEffect, playEntranceEffect };

@@ -7,11 +7,13 @@ const storageKey = "grand-line-arcade-muted";
 export type AudioMutePreference = Readonly<{
   muted: boolean;
   storageAvailable: boolean;
+  loaded: boolean;
 }>;
 
 const serverSnapshot: AudioMutePreference = Object.freeze({
   muted: false,
   storageAvailable: true,
+  loaded: false,
 });
 let snapshot: AudioMutePreference | null = null;
 const listeners = new Set<() => void>();
@@ -21,10 +23,11 @@ function readSnapshot(): AudioMutePreference {
     return Object.freeze({
       muted: window.localStorage.getItem(storageKey) === "true",
       storageAvailable: true,
+      loaded: true,
     });
   } catch (error) {
     console.error("Could not load the saved audio preference.", error);
-    return Object.freeze({ muted: false, storageAvailable: false });
+    return Object.freeze({ muted: false, storageAvailable: false, loaded: true });
   }
 }
 
@@ -70,7 +73,7 @@ export function setAudioMutePreference(muted: boolean): boolean {
     console.error("Could not save the audio preference.", error);
   }
 
-  snapshot = Object.freeze({ muted, storageAvailable });
+  snapshot = Object.freeze({ muted, storageAvailable, loaded: true });
   notifyListeners();
   return storageAvailable;
 }

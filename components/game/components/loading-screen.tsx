@@ -7,9 +7,10 @@ type LoadingScreenProps = {
   ready: boolean;
   exiting: boolean;
   onExitTransitionEnd: () => void;
+  onAudioUnlock: () => void;
 };
 
-export function LoadingScreen({ ready, exiting, onExitTransitionEnd }: LoadingScreenProps) {
+export function LoadingScreen({ ready, exiting, onExitTransitionEnd, onAudioUnlock }: LoadingScreenProps) {
   return (
     <section
       className={`intro-screen ${ready ? "intro-ready" : ""} ${exiting ? "intro-exit" : ""}`}
@@ -19,6 +20,11 @@ export function LoadingScreen({ ready, exiting, onExitTransitionEnd }: LoadingSc
       aria-busy={!ready}
       aria-hidden={exiting}
       inert={exiting}
+      tabIndex={0}
+      onPointerDown={onAudioUnlock}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onAudioUnlock();
+      }}
       onTransitionEnd={(event) => {
         if (event.target === event.currentTarget && exiting) onExitTransitionEnd();
       }}
@@ -42,6 +48,7 @@ export function LoadingScreen({ ready, exiting, onExitTransitionEnd }: LoadingSc
         <p className="intro-copy">A little friendly rivalry on the open sea.</p>
         <div className="loading-track" aria-hidden="true"><span /></div>
         <p className="loading-label">{ready ? "The crew is ready. Hoist the colors!" : "Gathering the crew..."}</p>
+        
       </motion.div>
       <p className="intro-credit">Jhon Almar Yumul</p>
     </section>

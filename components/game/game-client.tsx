@@ -74,8 +74,9 @@ export default function GameClient() {
   const seriesWinner: Mark | null = scores[0] === scores[1] ? null : scores[0] > scores[1] ? 0 : 1;
   const selectedTrack = tracks.find((track) => track.id === trackId) ?? tracks[0];
   const { audioUnlocked, audioError, unlockAudio, playEffect, playEntranceEffect } = useGameAudio({
-    enabled: !muted,
+    enabled: mutePreference.loaded && !muted,
     musicOn,
+    musicReady: !introVisible,
     effectsOn,
     musicVolume,
     effectsVolume,
@@ -83,10 +84,10 @@ export default function GameClient() {
   });
 
   useEffect(() => {
-    if (entranceCueRequested.current) return;
+    if (!mutePreference.loaded || entranceCueRequested.current) return;
     entranceCueRequested.current = true;
     playEntranceEffect("/audio/sound-effects/luffy.mp3");
-  }, [playEntranceEffect]);
+  }, [mutePreference.loaded, playEntranceEffect]);
 
   useEffect(() => {
     if (!didLog.current) {
@@ -229,12 +230,6 @@ export default function GameClient() {
   };
 
   const handleMasterAudioToggle = () => {
-    if (!audioUnlocked && !muted) {
-      unlockAudio();
-      toast.success("Audio is ready.");
-      return;
-    }
-
     const nextMuted = !muted;
     const saved = setAudioMutePreference(nextMuted);
     if (!saved) muteStorageErrorNotified.current = true;
@@ -243,7 +238,7 @@ export default function GameClient() {
         ? "All audio muted."
         : "All audio muted for now.");
     } else {
-      unlockAudio();
+      unlockAudio(true);
       toast.success(saved
         ? "Audio is back on."
         : "Audio is back on.");
@@ -252,7 +247,7 @@ export default function GameClient() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <main className="voyage-shell relative isolate h-dvh w-full overflow-clip">
+      <main className="voyage-shell relative isolate h-dvh w-full overflow-clip select-none">
         <Toaster position="top-center" richColors />
         <div className="sea-glow sea-glow-left" />
         <div className="sea-glow sea-glow-right" />
@@ -263,6 +258,7 @@ export default function GameClient() {
             ready={ready}
             exiting={introExiting}
             onExitTransitionEnd={() => setIntroVisible(false)}
+            onAudioUnlock={unlockAudio}
           />
         )}
 

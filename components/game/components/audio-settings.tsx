@@ -55,10 +55,11 @@ export function AudioSettings({
   return (
     <div className="topbar-right">
       <button
-        className={`sound-toggle ${!muted && audioUnlocked ? "sound-toggle-active" : ""}`}
+        className={`sound-toggle ${!muted ? "sound-toggle-active" : ""}`}
         onClick={onAudioToggle}
-        aria-label={!audioUnlocked && !muted ? "Enable all audio" : muted ? "Unmute all audio" : "Mute all audio"}
-        title={!audioUnlocked && !muted ? "Enable music and effects" : muted ? "Unmute all audio" : "Mute music and effects"}
+        aria-label={muted ? "Unmute all audio" : "Mute all audio"}
+        aria-pressed={!muted}
+        title={muted ? "Unmute all audio" : "Mute music and effects"}
         data-audio-master
       >
         <Icon name={muted ? "mute" : "volume"} size={15} />
